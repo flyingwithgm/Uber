@@ -1,0 +1,573 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tricycle Booking - Bolt Style</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .logo i {
+            font-size: 28px;
+        }
+
+        .location-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .input-group i {
+            font-size: 18px;
+            color: white;
+        }
+
+        .input-group input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 16px;
+            outline: none;
+            placeholder-color: rgba(255, 255, 255, 0.7);
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .book-btn {
+            background: #fff;
+            color: #10b981;
+            border: none;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-top: 10px;
+        }
+
+        .book-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .book-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Bottom Panel */
+        .bottom-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            z-index: 10;
+            transform: translateY(100%);
+            transition: transform 0.4s ease;
+        }
+
+        .panel-open {
+            transform: translateY(0);
+        }
+
+        .price-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .price-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #10b981;
+        }
+
+        .price-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #059669;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: 20px;
+            background: #f1f5f9;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: #10b981;
+            color: white;
+        }
+
+        .ride-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-details {
+            flex: 1;
+        }
+
+        .history-location {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .history-time {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .history-price {
+            font-weight: bold;
+            color: #10b981;
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .status-text {
+            font-weight: 500;
+        }
+
+        /* Confirmation Message */
+        .confirmation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+
+        .confirmation.show {
+            display: block;
+        }
+
+        .confirmation-icon {
+            font-size: 60px;
+            color: #10b981;
+            margin-bottom: 20px;
+        }
+
+        .confirmation-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+
+        .confirmation-message {
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        /* Driver Info */
+        .driver-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .driver-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .driver-details {
+            flex: 1;
+        }
+
+        .driver-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .driver-tricycle {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px;
+            }
+            
+            .logo {
+                font-size: 20px;
+            }
+            
+            .input-group input {
+                font-size: 14px;
+            }
+            
+            .book-btn {
+                padding: 14px;
+                font-size: 16px;
+            }
+            
+            .price-text, .price-value {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-motorcycle"></i>
+                    <span>TricycleExpress</span>
+                </div>
+                <div class="location-inputs">
+                    <div class="input-group">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <input type="text" id="pickup" placeholder="Enter pickup location">
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-flag-checkered"></i>
+                        <input type="text" id="dropoff" placeholder="Enter destination">
+                    </div>
+                </div>
+                <button class="book-btn" id="bookBtn">
+                    <i class="fas fa-calendar-check"></i> Book Tricycle
+                </button>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- Bottom Panel -->
+        <div class="bottom-panel" id="bottomPanel">
+            <div class="price-info">
+                <div class="price-text">Estimated Price:</div>
+                <div class="price-value" id="estimatedPrice">GH₵ 0.00</div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="history">Ride History</div>
+            </div>
+
+            <div class="ride-history" id="rideHistory">
+                <!-- History items will be populated here -->
+            </div>
+
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <div class="status-text">Your tricycle is on the way 🚖</div>
+            </div>
+
+            <div class="driver-info">
+                <div class="driver-avatar">K</div>
+                <div class="driver-details">
+                    <div class="driver-name">Driver Kofi</div>
+                    <div class="driver-tricycle">Tricycle #21</div>
+                </div>
+                <div class="driver-status">
+                    <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="confirmation" id="confirmation">
+            <div class="confirmation-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 class="confirmation-title">Booking Confirmed!</h2>
+            <p class="confirmation-message">Your tricycle is on the way. Driver Kofi will arrive shortly.</p>
+            <button class="book-btn" onclick="closeConfirmation()">Continue</button>
+        </div>
+    </div>
+
+    <!-- Leaflet Map Library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([5.55, -0.2], 13);
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Mock locations for demonstration
+        const mockLocations = {
+            'accra': [5.55, -0.2],
+            'kumasi': [6.6833, -1.65],
+            'tamale': [9.4, -0.8],
+            'takoradi': [4.9333, -1.7833]
+        };
+
+        // Sample ride history data
+        const rideHistory = [
+            {
+                id: 1,
+                pickup: "Accra Central",
+                dropoff: "Airport",
+                time: "2023-05-15 14:30",
+                price: "GH₵ 12.50"
+            },
+            {
+                id: 2,
+                pickup: "Kasoa",
+                dropoff: "Labadi Beach",
+                time: "2023-05-14 09:15",
+                price: "GH₵ 8.00"
+            },
+            {
+                id: 3,
+                pickup: "Dansoman",
+                dropoff: "Nungua",
+                time: "2023-05-13 18:45",
+                price: "GH₵ 6.20"
+            }
+        ];
+
+        // DOM Elements
+        const bookBtn = document.getElementById('bookBtn');
+        const bottomPanel = document.getElementById('bottomPanel');
+        const estimatedPrice = document.getElementById('estimatedPrice');
+        const rideHistoryContainer = document.getElementById('rideHistory');
+        const confirmation = document.getElementById('confirmation');
+
+        // Initialize with sample data
+        function init() {
+            populateRideHistory();
+            updateEstimatedPrice();
+        }
+
+        // Populate ride history
+        function populateRideHistory() {
+            rideHistoryContainer.innerHTML = '';
+            rideHistory.forEach(ride => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <div class="history-details">
+                        <div class="history-location">${ride.pickup} → ${ride.dropoff}</div>
+                        <div class="history-time">${ride.time}</div>
+                    </div>
+                    <div class="history-price">${ride.price}</div>
+                `;
+                rideHistoryContainer.appendChild(historyItem);
+            });
+        }
+
+        // Update estimated price
+        function updateEstimatedPrice() {
+            // Simple calculation: base price + distance * rate per km
+            const basePrice = 10;
+            const ratePerKm = 2;
+            const distance = Math.random() * 10 + 5; // Random distance between 5-15km
+            const price = basePrice + (distance * ratePerKm);
+            estimatedPrice.textContent = `GH₵ ${price.toFixed(2)}`;
+        }
+
+        // Book tricycle
+        bookBtn.addEventListener('click', function() {
+            const pickup = document.getElementById('pickup').value;
+            const dropoff = document.getElementById('dropoff').value;
+
+            if (!pickup || !dropoff) {
+                alert('Please enter both pickup and dropoff locations');
+                return;
+            }
+
+            // Show confirmation
+            confirmation.classList.add('show');
+            
+            // Simulate booking process
+            setTimeout(() => {
+                bottomPanel.classList.add('panel-open');
+                updateEstimatedPrice();
+                
+                // Add to history (simulated)
+                const newRide = {
+                    id: rideHistory.length + 1,
+                    pickup: pickup,
+                    dropoff: dropoff,
+                    time: new Date().toLocaleString(),
+                    price: estimatedPrice.textContent
+                };
+                
+                rideHistory.unshift(newRide);
+                populateRideHistory();
+            }, 2000);
+        });
+
+        // Close confirmation
+        function closeConfirmation() {
+            confirmation.classList.remove('show');
+        }
+
+        // Initialize the app
+        init();
+
+        // Add some sample markers for demonstration
+        const sampleMarkers = [
+            {name: "Accra Central", coords: [5.55, -0.2]},
+            {name: "Airport", coords: [5.6, -0.2]},
+            {name: "Kasoa", coords: [5.7, -0.1]},
+            {name: "Labadi Beach", coords: [5.5, -0.3]}
+        ];
+
+        sampleMarkers.forEach(marker => {
+            L.marker(marker.coords).addTo(map)
+                .bindPopup(`<b>${marker.name}</b>`);
+        });
+
+        // Simulate route drawing (in a real app, this would come from Google Maps API)
+        const routeCoordinates = [
+            [5.55, -0.2],
+            [5.58, -0.15],
+            [5.6, -0.2],
+            [5.6, -0.25]
+        ];
+
+        L.polyline(routeCoordinates, {color: '#10b981', weight: 5}).addTo(map);
+    </script>
+</body>
+</html>
+```
